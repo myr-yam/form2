@@ -23,36 +23,63 @@
     <div id="viewDiv"></div>
     <div id="sketchDiv"></div>
     <script>
-  require([
-  "esri/Map",
-  "esri/views/MapView",
-  "esri/widgets/Sketch",
-  "esri/layers/GraphicsLayer"
-], function(Map, MapView, Sketch, GraphicsLayer) {
+      require([
+        "esri/Map",
+        "esri/views/MapView",
+        "esri/widgets/Sketch",
+        "esri/layers/GraphicsLayer"
+      ], function(Map, MapView, Sketch, GraphicsLayer) {
 
-  const graphicsLayer = new GraphicsLayer();
+        function getCookie(name) {
+          const value = `; ${document.cookie}`;
+          const parts = value.split(`; ${name}=`);
+          if (parts.length === 2) return parts.pop().split(';').shift();
+        }
 
-  const map = new Map({
-    basemap: "topo-vector",
-    layers: [graphicsLayer]
-  });
+        function setCookie(name, value, days) {
+          const d = new Date();
+          d.setTime(d.getTime() + (days*24*60*60*1000));
+          document.cookie = `${name}=${value};expires=${d.toUTCString()};path=/`;
+        }
 
-  const view = new MapView({
-    container: "viewDiv",
-    map: map,
-    center: [39.8, 21.4],
-    zoom: 10
-  });
+        const graphicsLayer = new GraphicsLayer();
 
-  const sketch = new Sketch({
-    layer: graphicsLayer,
-    view: view,
-    creationMode: "update",
-    availableCreateTools: ["point", "polyline", "polygon", "rectangle", "circle"],
-    container: "sketchDiv" 
-  });
-});
-</script>
+        const map = new Map({
+          basemap: "topo-vector",
+          layers: [graphicsLayer]
+        });
 
+        // Read engineer's coordinate from cookie
+        let engineerCoord = getCookie("engineerCoords");
+        let centerCoord = engineerCoord ? engineerCoord.split(",").map(Number).reverse() : [39.8, 21.4]; 
+        // reverse() because ArcGIS takes [lon, lat]
+
+        const view = new MapView({
+          container: "viewDiv",
+          map: map,
+          center: centerCoord,
+          zoom: 15
+        });
+
+        const sketch = new Sketch({
+          layer: graphicsLayer,
+          view: view,
+          creationMode: "update",
+          availableCreateTools: ["point", "polyline", "polygon", "rectangle", "circle"],
+          container: "sketchDiv" 
+        });
+
+        // Save drawn sketch coordinates to cookie when completed
+        sketch.on("create", function(event) {
+          if (event.state === "complete") {
+            const geom = event.graphic.geometry.toJSON();
+            let existingSketches = getCookie("supervisorSketches");
+            let sketchesArray = existingSketches ? JSON.parse(existingSketches) : [];
+            sketchesArray.push(geom);
+            setCookie("supervisorSketches", JSON.stringify(sketchesArray), 1);
+          }
+        });
+      });
+    </script>
   </body>
 </html>
