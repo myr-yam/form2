@@ -53,32 +53,39 @@
           container: "sketchDiv" 
         });
 
-        // Read coordinates from URL params (e.g., ?coords=30.123456,31.654321)
-        const urlParams = new URLSearchParams(window.location.search);
-        const coords = urlParams.get("coords");
+        // Wait until the parent form is loaded, then read the coordinates field
+        function loadCoordinatesFromJoget() {
+          try {
+            const input = window.parent.document.querySelector("input[name='coordinates']");
+            if (input && input.value) {
+              const [lat, lon] = input.value.split(",").map(Number);
+              if (!isNaN(lat) && !isNaN(lon)) {
+                view.center = [lon, lat];
+                view.zoom = 16;
 
-        if (coords) {
-          const [lat, lon] = coords.split(",").map(Number);
-          if (!isNaN(lat) && !isNaN(lon)) {
-            view.center = [lon, lat];
-            view.zoom = 16;
-
-            // Add a point marker at that location
-            const pointGraphic = new Graphic({
-              geometry: {
-                type: "point",
-                longitude: lon,
-                latitude: lat
-              },
-              symbol: {
-                type: "simple-marker",
-                color: "red",
-                size: "12px"
+                // Add a point marker at that location
+                const pointGraphic = new Graphic({
+                  geometry: {
+                    type: "point",
+                    longitude: lon,
+                    latitude: lat
+                  },
+                  symbol: {
+                    type: "simple-marker",
+                    color: "red",
+                    size: "12px"
+                  }
+                });
+                graphicsLayer.add(pointGraphic);
               }
-            });
-            graphicsLayer.add(pointGraphic);
+            }
+          } catch (e) {
+            console.warn("Could not read coordinates from parent form:", e);
           }
         }
+
+        // Run after small delay to ensure Joget form DOM is ready
+        setTimeout(loadCoordinatesFromJoget, 1000);
       });
     </script>
   </body>
