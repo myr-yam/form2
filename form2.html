@@ -23,117 +23,35 @@
     <div id="viewDiv"></div>
     <div id="sketchDiv"></div>
     <script>
-      require([
-        "esri/Map",
-        "esri/views/MapView",
-        "esri/widgets/Sketch",
-        "esri/layers/GraphicsLayer",
-        "esri/Graphic"
-      ], function(Map, MapView, Sketch, GraphicsLayer, Graphic) {
+  require([
+  "esri/Map",
+  "esri/views/MapView",
+  "esri/widgets/Sketch",
+  "esri/layers/GraphicsLayer"
+], function(Map, MapView, Sketch, GraphicsLayer) {
 
-        const graphicsLayer = new GraphicsLayer();
+  const graphicsLayer = new GraphicsLayer();
 
-        const map = new Map({
-          basemap: "topo-vector",
-          layers: [graphicsLayer]
-        });
+  const map = new Map({
+    basemap: "topo-vector",
+    layers: [graphicsLayer]
+  });
 
-        const view = new MapView({
-          container: "viewDiv",
-          map: map,
-          center: [31.8, 30.4], // default center
-          zoom: 8
-        });
+  const view = new MapView({
+    container: "viewDiv",
+    map: map,
+    center: [39.8, 21.4],
+    zoom: 10
+  });
 
-        const sketch = new Sketch({
-          layer: graphicsLayer,
-          view: view,
-          creationMode: "update",
-          availableCreateTools: ["point", "polyline", "polygon", "rectangle", "circle"],
-          container: "sketchDiv"
-        });
+  const sketch = new Sketch({
+    layer: graphicsLayer,
+    view: view,
+    creationMode: "update",
+    availableCreateTools: ["point", "polyline", "polygon", "rectangle", "circle"],
+    container: "sketchDiv" 
+  });
+});
+</script>
 
-        /** Find Joget field in parent form **/
-        function getField(name) {
-          try {
-            return window.parent.document.querySelector(
-              `textarea[name='${name}'], input[name='${name}']`
-            );
-          } catch (e) {
-            console.warn("Unable to access parent form:", e);
-            return null;
-          }
-        }
-
-        /** Load coordinates into map **/
-        function loadCoordinates() {
-          const coordField = getField("coordinates");
-          if (coordField && coordField.value) {
-            const [lat, lon] = coordField.value.split(",").map(Number);
-            if (!isNaN(lat) && !isNaN(lon)) {
-              view.center = [lon, lat];
-              view.zoom = 16;
-
-              // Add marker for site location
-              graphicsLayer.add(
-                new Graphic({
-                  geometry: { type: "point", longitude: lon, latitude: lat },
-                  symbol: { type: "simple-marker", color: "red", size: "12px" }
-                })
-              );
-            }
-          }
-        }
-
-        /** Load saved sketches **/
-        function loadSketches() {
-          const sketchField = getField("site_sketch");
-          if (sketchField && sketchField.value) {
-            try {
-              const savedGraphics = JSON.parse(sketchField.value);
-              savedGraphics.forEach(g => graphicsLayer.add(new Graphic(g)));
-            } catch (err) {
-              console.warn("Error parsing saved sketches:", err);
-            }
-          }
-        }
-
-        /** Save current sketches **/
-        function saveSketches() {
-          const sketchField = getField("site_sketch");
-          if (sketchField) {
-            const graphicsData = graphicsLayer.graphics
-              .toArray()
-              .map(g => g.toJSON());
-            sketchField.value = JSON.stringify(graphicsData);
-          }
-        }
-
-        /** Save coordinates to Joget field when point created **/
-        sketch.on("create", e => {
-          if (e.state === "complete") {
-            if (e.tool === "point") {
-              const geometry = e.graphic.geometry;
-              const lon = geometry.longitude;
-              const lat = geometry.latitude;
-              const coordField = getField("coordinates");
-              if (coordField) {
-                coordField.value = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
-              }
-            }
-            saveSketches();
-          }
-        });
-
-        sketch.on("update", e => { if (e.state === "complete") saveSketches(); });
-        sketch.on("delete", saveSketches);
-
-        /** Run after form loads **/
-        setTimeout(() => {
-          loadCoordinates();
-          loadSketches();
-        }, 1000);
-      });
-    </script>
   </body>
-</html>
