@@ -23,75 +23,79 @@
     <div id="viewDiv"></div>
     <div id="sketchDiv"></div>
     <script>
-      require([
-        "esri/Map",
-        "esri/views/MapView",
-        "esri/widgets/Sketch",
-        "esri/layers/GraphicsLayer",
-        "esri/Graphic"
-      ], function(Map, MapView, Sketch, GraphicsLayer, Graphic) {
+require([
+  "esri/Map",
+  "esri/views/MapView",
+  "esri/widgets/Sketch",
+  "esri/layers/GraphicsLayer",
+  "esri/Graphic"
+], function(Map, MapView, Sketch, GraphicsLayer, Graphic) {
 
-        const graphicsLayer = new GraphicsLayer();
+  const graphicsLayer = new GraphicsLayer();
 
-        const map = new Map({
-          basemap: "topo-vector",
-          layers: [graphicsLayer]
+  const map = new Map({
+    basemap: "topo-vector",
+    layers: [graphicsLayer]
+  });
+
+  const view = new MapView({
+    container: "viewDiv",
+    map: map,
+    center: [31.8, 30.4],
+    zoom: 8
+  });
+
+  const sketch = new Sketch({
+    layer: graphicsLayer,
+    view: view,
+    creationMode: "update",
+    availableCreateTools: ["point", "polyline", "polygon", "rectangle", "circle"],
+    container: "sketchDiv" 
+  });
+
+  // Find the hidden field in the parent Joget form
+  function getSketchField() {
+    return window.parent.document.querySelector("input[name='supervisor_sketch']");
+  }
+
+  // Load saved sketches from field
+  function loadSavedSketch() {
+    const field = getSketchField();
+    if (field && field.value) {
+      try {
+        const savedGraphics = JSON.parse(field.value);
+        savedGraphics.forEach(g => {
+          graphicsLayer.add(new Graphic(g));
         });
+      } catch (e) {
+        console.warn("Error loading saved sketch:", e);
+      }
+    }
+  }
 
-        const view = new MapView({
-          container: "viewDiv",
-          map: map,
-          center: [31.8, 30.4], // default
-          zoom: 8
-        });
+  // Save sketches whenever changed
+  function saveSketch() {
+    const field = getSketchField();
+    if (field) {
+      const graphicsData = graphicsLayer.graphics.toArray().map(g => g.toJSON());
+      field.value = JSON.stringify(graphicsData);
+    }
+  }
 
-        const sketch = new Sketch({
-          layer: graphicsLayer,
-          view: view,
-          creationMode: "update",
-          availableCreateTools: ["point", "polyline", "polygon", "rectangle", "circle"],
-          container: "sketchDiv" 
-        });
+  // Listen for create/update/delete events
+  sketch.on("create", event => {
+    if (event.state === "complete") saveSketch();
+  });
+  sketch.on("update", event => {
+    if (event.state === "complete") saveSketch();
+  });
+  sketch.on("delete", saveSketch);
 
-        function findCoordinatesField() {
-          // Try in main form
-          let input = window.parent.document.querySelector("input[name='coordinates']");
-          if (input) return input;
+  // Load saved sketches after form loads
+  setTimeout(loadSavedSketch, 1000);
+});
+</script>
 
-          // Try inside subform iframe
-          const subformIframe = window.parent.document.querySelector("iframe");
-          if (subformIframe && subformIframe.contentDocument) {
-            return subformIframe.contentDocument.querySelector("input[name='coordinates']");
-          }
-
-          return null;
-        }
-
-        function zoomToSavedCoordinates() {
-          const input = findCoordinatesField();
-          if (input && input.value) {
-            const [lat, lon] = input.value.split(",").map(Number);
-            if (!isNaN(lat) && !isNaN(lon)) {
-              view.center = [lon, lat];
-              view.zoom = 16;
-
-              const marker = new Graphic({
-                geometry: { type: "point", longitude: lon, latitude: lat },
-                symbol: { type: "simple-marker", color: "red", size: "12px" }
-              });
-              graphicsLayer.add(marker);
-              console.log("Zoomed to:", lat, lon);
-            } else {
-              console.warn("Invalid coordinates format:", input.value);
-            }
-          } else {
-            console.warn("Coordinates field not found or empty");
-          }
-        }
-
-        // Give Joget enough time to fully render subform
-        setTimeout(zoomToSavedCoordinates, 2000);
-      });
-    </script>
   </body>
 </html>
+
