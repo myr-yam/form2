@@ -41,7 +41,7 @@
         const view = new MapView({
           container: "viewDiv",
           map: map,
-          center: [39.8, 21.4], // fallback center
+          center: [39.8, 21.4],  // Default center if no coordinates found
           zoom: 10
         });
 
@@ -53,7 +53,7 @@
           container: "sketchDiv" 
         });
 
-        // Wait until the parent form is loaded, then read the coordinates field
+        // Load coordinates from Joget text field "coordinates"
         function loadCoordinatesFromJoget() {
           try {
             const input = window.parent.document.querySelector("input[name='coordinates']");
@@ -63,7 +63,7 @@
                 view.center = [lon, lat];
                 view.zoom = 16;
 
-                // Add a point marker at that location
+                // Add a marker at that location
                 const pointGraphic = new Graphic({
                   geometry: {
                     type: "point",
@@ -84,8 +84,26 @@
           }
         }
 
-        // Run after small delay to ensure Joget form DOM is ready
+        // Wait for parent form to load before trying to read
         setTimeout(loadCoordinatesFromJoget, 1000);
+
+        // Keep sketch tool working so supervisor can draw/edit
+        sketch.on("create", function(event) {
+          if (event.state === "complete") {
+            const geometry = event.graphic.geometry;
+            const lon = geometry.longitude || geometry.extent?.center.longitude;
+            const lat = geometry.latitude || geometry.extent?.center.latitude;
+
+            // Send selected coordinates back to Joget form (optional)
+            window.parent.postMessage(
+              {
+                type: "coordinateSelected",
+                coordinates: `${lat?.toFixed(6)}, ${lon?.toFixed(6)}`
+              },
+              "*"
+            );
+          }
+        });
       });
     </script>
   </body>
