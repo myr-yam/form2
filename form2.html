@@ -1,76 +1,58 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8" />
-  <title>Map 2 (Supervisor)</title>
-  <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
-  <script src="https://js.arcgis.com/4.29/"></script>
-  <style>
-    html, body, #viewDiv { height: 100%; margin: 0; padding: 0; }
-    #sketchDiv {
-      position: absolute; top: 10px; left: 10px; z-index: 99;
-      background: white; padding: 10px; border-radius: 6px;
-    }
-  </style>
-</head>
-<body>
-  <div id="viewDiv"></div>
-  <div id="sketchDiv"></div>
-
-  <script>
-  require([
-    "esri/Map",
-    "esri/views/MapView",
-    "esri/widgets/Sketch",
-    "esri/layers/GraphicsLayer",
-    "esri/Graphic"
-  ], function(Map, MapView, Sketch, GraphicsLayer, Graphic) {
-
-    const graphicsLayer = new GraphicsLayer();
-
-    const map = new Map({
-      basemap: "topo-vector",
-      layers: [graphicsLayer]
-    });
-
-    const view = new MapView({
-      container: "viewDiv",
-      map: map,
-       center: [31.8, 30.4], // your original center
-      zoom: 8
-    });
-
-    const sketch = new Sketch({
-      layer: graphicsLayer,
-      view: view,
-      creationMode: "update",
-      availableCreateTools: ["point", "polyline", "polygon", "rectangle", "circle"],
-      container: "sketchDiv"
-    });
-
-    function saveAllGraphicsToParent() {
-      const arr = graphicsLayer.graphics.toArray().map(g => g.toJSON());
-      window.parent.postMessage({ type: "SAVE_SKETCH", data: JSON.stringify(arr) }, "*");
-    }
-
-    sketch.on("create", e => { if (e.state === "complete") saveAllGraphicsToParent(); });
-    sketch.on("update", e => { if (e.state === "complete") saveAllGraphicsToParent(); });
-    sketch.on("delete", () => saveAllGraphicsToParent());
-
-    // Receive saved sketches from parent
-    window.addEventListener("message", function(event) {
-      if (!event.data || event.data.type !== "LOAD_SKETCH") return;
-      try {
-        const arr = event.data.data ? JSON.parse(event.data.data) : [];
-        graphicsLayer.removeAll();
-        arr.forEach(gjson => graphicsLayer.add(new Graphic(gjson)));
-      } catch (e) {
-        console.error("Failed to load sketches:", e);
+  <head>
+    <meta charset="utf-8" />
+    <title>ArcGIS Map in Joget</title>
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
+    <script src="https://js.arcgis.com/4.29/"></script>
+    <style>
+      html, body, #viewDiv { height: 100%; margin: 0; padding: 0; }
+      #sketchDiv {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 99;
+        background: white;
+        padding: 10px;
+        border-radius: 6px;
       }
-    });
-  });
-  </script>
-</body>
-</html>
+    </style>
+  </head>
+  <body>
+    <div id="viewDiv"></div>
+    <div id="sketchDiv"></div>
+    <script>
+  require([
+  "esri/Map",
+  "esri/views/MapView",
+  "esri/widgets/Sketch",
+  "esri/layers/GraphicsLayer"
+], function(Map, MapView, Sketch, GraphicsLayer) {
 
+  const graphicsLayer = new GraphicsLayer();
+
+  const map = new Map({
+    basemap: "topo-vector",
+    layers: [graphicsLayer]
+  });
+
+  const view = new MapView({
+    container: "viewDiv",
+    map: map,
+    center: [39.8, 21.4],
+    zoom: 10
+  });
+
+  const sketch = new Sketch({
+    layer: graphicsLayer,
+    view: view,
+    creationMode: "update",
+    availableCreateTools: ["point", "polyline", "polygon", "rectangle", "circle"],
+    container: "sketchDiv" 
+  });
+});
+</script>
+
+  </body>
+</html>
