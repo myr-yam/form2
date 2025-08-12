@@ -1,58 +1,94 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8" />
-    <title>ArcGIS Map in Joget</title>
-    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
-    <script src="https://js.arcgis.com/4.29/"></script>
-    <style>
-      html, body, #viewDiv { height: 100%; margin: 0; padding: 0; }
-      #sketchDiv {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        z-index: 99;
-        background: white;
-        padding: 10px;
-        border-radius: 6px;
+<head>
+  <meta charset="utf-8" />
+  <title>ArcGIS Map in Joget</title>
+  <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
+  <script src="https://js.arcgis.com/4.29/"></script>
+  <style>
+    html, body, #viewDiv { height: 100%; margin: 0; padding: 0; }
+    #sketchDiv {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 99;
+      background: white;
+      padding: 10px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <input type="hidden" name="sketchData" id="sketchData" />
+  <div id="viewDiv"></div>
+  <div id="sketchDiv"></div>
+
+  <script>
+    require([
+      "esri/Map",
+      "esri/views/MapView",
+      "esri/widgets/Sketch",
+      "esri/layers/GraphicsLayer"
+    ], function(Map, MapView, Sketch, GraphicsLayer) {
+
+      const graphicsLayer = new GraphicsLayer();
+
+      const map = new Map({
+        basemap: "topo-vector",
+        layers: [graphicsLayer]
+      });
+
+      const view = new MapView({
+        container: "viewDiv",
+        map: map,
+        center: [39.8, 21.4],
+        zoom: 10
+      });
+
+      const sketch = new Sketch({
+        layer: graphicsLayer,
+        view: view,
+        creationMode: "update",
+        availableCreateTools: ["point", "polyline", "polygon", "rectangle", "circle"],
+        container: "sketchDiv"
+      });
+
+      const hiddenField = document.querySelector("[name='sketchData']");
+
+      // Load saved sketches
+      if (hiddenField && hiddenField.value) {
+        try {
+          const savedGraphics = JSON.parse(hiddenField.value);
+          savedGraphics.forEach(g => graphicsLayer.add(g));
+        } catch (e) {
+          console.error("Error loading saved graphics", e);
+        }
       }
-    </style>
-  </head>
-  <body>
-    <div id="viewDiv"></div>
-    <div id="sketchDiv"></div>
-    <script>
-  require([
-  "esri/Map",
-  "esri/views/MapView",
-  "esri/widgets/Sketch",
-  "esri/layers/GraphicsLayer"
-], function(Map, MapView, Sketch, GraphicsLayer) {
 
-  const graphicsLayer = new GraphicsLayer();
+      // Save sketches back to hidden field
+      function saveSketches() {
+        const graphicsJSON = graphicsLayer.toJSON().layers[0].graphics;
+        hiddenField.value = JSON.stringify(graphicsJSON);
+      }
 
-  const map = new Map({
-    basemap: "topo-vector",
-    layers: [graphicsLayer]
-  });
+      sketch.on("create", function(event) {
+        if (event.state === "complete") {
+          saveSketches();
+        }
+      });
 
-  const view = new MapView({
-    container: "viewDiv",
-    map: map,
-    center: [31.8, 30.4],  // Default center
-    zoom: 8
-  });
+      sketch.on("update", function(event) {
+        if (event.state === "complete") {
+          saveSketches();
+        }
+      });
 
-  const sketch = new Sketch({
-    layer: graphicsLayer,
-    view: view,
-    creationMode: "update",
-    availableCreateTools: ["point", "polyline", "polygon", "rectangle", "circle"],
-    container: "sketchDiv" 
-  });
-});
-</script>
+      sketch.on("delete", function(event) {
+        saveSketches();
+      });
 
-  </body>
-
+    });
+  </script>
+</body>
+</html>
