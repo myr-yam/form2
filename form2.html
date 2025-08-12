@@ -27,20 +27,9 @@
         "esri/Map",
         "esri/views/MapView",
         "esri/widgets/Sketch",
-        "esri/layers/GraphicsLayer"
-      ], function(Map, MapView, Sketch, GraphicsLayer) {
-
-        function getCookie(name) {
-          const value = `; ${document.cookie}`;
-          const parts = value.split(`; ${name}=`);
-          if (parts.length === 2) return parts.pop().split(';').shift();
-        }
-
-        function setCookie(name, value, days) {
-          const d = new Date();
-          d.setTime(d.getTime() + (days*24*60*60*1000));
-          document.cookie = `${name}=${value};expires=${d.toUTCString()};path=/`;
-        }
+        "esri/layers/GraphicsLayer",
+        "esri/Graphic"
+      ], function(Map, MapView, Sketch, GraphicsLayer, Graphic) {
 
         const graphicsLayer = new GraphicsLayer();
 
@@ -49,16 +38,11 @@
           layers: [graphicsLayer]
         });
 
-        // Read engineer's coordinate from cookie
-        let engineerCoord = getCookie("engineerCoords");
-        let centerCoord = engineerCoord ? engineerCoord.split(",").map(Number).reverse() : [39.8, 21.4]; 
-        // reverse() because ArcGIS takes [lon, lat]
-
         const view = new MapView({
           container: "viewDiv",
           map: map,
-          center: centerCoord,
-          zoom: 15
+          center: [39.8, 21.4], // fallback center
+          zoom: 10
         });
 
         const sketch = new Sketch({
@@ -69,16 +53,32 @@
           container: "sketchDiv" 
         });
 
-        // Save drawn sketch coordinates to cookie when completed
-        sketch.on("create", function(event) {
-          if (event.state === "complete") {
-            const geom = event.graphic.geometry.toJSON();
-            let existingSketches = getCookie("supervisorSketches");
-            let sketchesArray = existingSketches ? JSON.parse(existingSketches) : [];
-            sketchesArray.push(geom);
-            setCookie("supervisorSketches", JSON.stringify(sketchesArray), 1);
+        // Read coordinates from URL params (e.g., ?coords=30.123456,31.654321)
+        const urlParams = new URLSearchParams(window.location.search);
+        const coords = urlParams.get("coords");
+
+        if (coords) {
+          const [lat, lon] = coords.split(",").map(Number);
+          if (!isNaN(lat) && !isNaN(lon)) {
+            view.center = [lon, lat];
+            view.zoom = 16;
+
+            // Add a point marker at that location
+            const pointGraphic = new Graphic({
+              geometry: {
+                type: "point",
+                longitude: lon,
+                latitude: lat
+              },
+              symbol: {
+                type: "simple-marker",
+                color: "red",
+                size: "12px"
+              }
+            });
+            graphicsLayer.add(pointGraphic);
           }
-        });
+        }
       });
     </script>
   </body>
