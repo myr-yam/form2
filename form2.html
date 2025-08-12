@@ -41,8 +41,8 @@
         const view = new MapView({
           container: "viewDiv",
           map: map,
-          center: [39.8, 21.4],  // Default center if no coordinates found
-          zoom: 10
+          center: [31.8, 30.4],  // Same default center as Form 1
+          zoom: 8
         });
 
         const sketch = new Sketch({
@@ -87,24 +87,4 @@
         // Wait for parent form to load before trying to read
         setTimeout(loadCoordinatesFromJoget, 1000);
 
-        // Keep sketch tool working so supervisor can draw/edit
-        sketch.on("create", function(event) {
-          if (event.state === "complete") {
-            const geometry = event.graphic.geometry;
-            const lon = geometry.longitude || geometry.extent?.center.longitude;
-            const lat = geometry.latitude || geometry.extent?.center.latitude;
-
-            // Send selected coordinates back to Joget form (optional)
-            window.parent.postMessage(
-              {
-                type: "coordinateSelected",
-                coordinates: `${lat?.toFixed(6)}, ${lon?.toFixed(6)}`
-              },
-              "*"
-            );
-          }
-        });
-      });
-    </script>
-  </body>
-</html>
+        // Keep sketch tool working so s
