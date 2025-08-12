@@ -41,7 +41,7 @@
         const view = new MapView({
           container: "viewDiv",
           map: map,
-          center: [31.8, 30.4],
+          center: [31.8, 30.4], // default center
           zoom: 8
         });
 
@@ -53,22 +53,44 @@
           container: "sketchDiv"
         });
 
-        // Find sketch storage field in Joget form
-        function getSketchField() {
+        /** Find Joget field in parent form **/
+        function getField(name) {
           try {
-            return window.parent.document.querySelector("textarea[name='site_sketch'], input[name='site_sketch']");
+            return window.parent.document.querySelector(
+              `textarea[name='${name}'], input[name='${name}']`
+            );
           } catch (e) {
             console.warn("Unable to access parent form:", e);
             return null;
           }
         }
 
-        // Load saved sketches
+        /** Load coordinates into map **/
+        function loadCoordinates() {
+          const coordField = getField("coordinates");
+          if (coordField && coordField.value) {
+            const [lat, lon] = coordField.value.split(",").map(Number);
+            if (!isNaN(lat) && !isNaN(lon)) {
+              view.center = [lon, lat];
+              view.zoom = 16;
+
+              // Add marker for site location
+              graphicsLayer.add(
+                new Graphic({
+                  geometry: { type: "point", longitude: lon, latitude: lat },
+                  symbol: { type: "simple-marker", color: "red", size: "12px" }
+                })
+              );
+            }
+          }
+        }
+
+        /** Load saved sketches **/
         function loadSketches() {
-          const field = getSketchField();
-          if (field && field.value) {
+          const sketchField = getField("site_sketch");
+          if (sketchField && sketchField.value) {
             try {
-              const savedGraphics = JSON.parse(field.value);
+              const savedGraphics = JSON.parse(sketchField.value);
               savedGraphics.forEach(g => graphicsLayer.add(new Graphic(g)));
             } catch (err) {
               console.warn("Error parsing saved sketches:", err);
@@ -76,22 +98,41 @@
           }
         }
 
-        // Save sketches to field
+        /** Save current sketches **/
         function saveSketches() {
-          const field = getSketchField();
-          if (field) {
-            const graphicsData = graphicsLayer.graphics.toArray().map(g => g.toJSON());
-            field.value = JSON.stringify(graphicsData);
+          const sketchField = getField("site_sketch");
+          if (sketchField) {
+            const graphicsData = graphicsLayer.graphics
+              .toArray()
+              .map(g => g.toJSON());
+            sketchField.value = JSON.stringify(graphicsData);
           }
         }
 
-        // Listen for changes
-        sketch.on("create", e => { if (e.state === "complete") saveSketches(); });
+        /** Save coordinates to Joget field when point created **/
+        sketch.on("create", e => {
+          if (e.state === "complete") {
+            if (e.tool === "point") {
+              const geometry = e.graphic.geometry;
+              const lon = geometry.longitude;
+              const lat = geometry.latitude;
+              const coordField = getField("coordinates");
+              if (coordField) {
+                coordField.value = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+              }
+            }
+            saveSketches();
+          }
+        });
+
         sketch.on("update", e => { if (e.state === "complete") saveSketches(); });
         sketch.on("delete", saveSketches);
 
-        // Load when form is ready
-        setTimeout(loadSketches, 1000);
+        /** Run after form loads **/
+        setTimeout(() => {
+          loadCoordinates();
+          loadSketches();
+        }, 1000);
       });
     </script>
   </body>
