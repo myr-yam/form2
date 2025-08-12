@@ -23,79 +23,76 @@
     <div id="viewDiv"></div>
     <div id="sketchDiv"></div>
     <script>
-require([
-  "esri/Map",
-  "esri/views/MapView",
-  "esri/widgets/Sketch",
-  "esri/layers/GraphicsLayer",
-  "esri/Graphic"
-], function(Map, MapView, Sketch, GraphicsLayer, Graphic) {
+      require([
+        "esri/Map",
+        "esri/views/MapView",
+        "esri/widgets/Sketch",
+        "esri/layers/GraphicsLayer",
+        "esri/Graphic"
+      ], function(Map, MapView, Sketch, GraphicsLayer, Graphic) {
 
-  const graphicsLayer = new GraphicsLayer();
+        const graphicsLayer = new GraphicsLayer();
 
-  const map = new Map({
-    basemap: "topo-vector",
-    layers: [graphicsLayer]
-  });
-
-  const view = new MapView({
-    container: "viewDiv",
-    map: map,
-    center: [31.8, 30.4],
-    zoom: 8
-  });
-
-  const sketch = new Sketch({
-    layer: graphicsLayer,
-    view: view,
-    creationMode: "update",
-    availableCreateTools: ["point", "polyline", "polygon", "rectangle", "circle"],
-    container: "sketchDiv" 
-  });
-
-  // Find the hidden field in the parent Joget form
-  function getSketchField() {
-    return window.parent.document.querySelector("input[name='supervisor_sketch']");
-  }
-
-  // Load saved sketches from field
-  function loadSavedSketch() {
-    const field = getSketchField();
-    if (field && field.value) {
-      try {
-        const savedGraphics = JSON.parse(field.value);
-        savedGraphics.forEach(g => {
-          graphicsLayer.add(new Graphic(g));
+        const map = new Map({
+          basemap: "topo-vector",
+          layers: [graphicsLayer]
         });
-      } catch (e) {
-        console.warn("Error loading saved sketch:", e);
-      }
-    }
-  }
 
-  // Save sketches whenever changed
-  function saveSketch() {
-    const field = getSketchField();
-    if (field) {
-      const graphicsData = graphicsLayer.graphics.toArray().map(g => g.toJSON());
-      field.value = JSON.stringify(graphicsData);
-    }
-  }
+        const view = new MapView({
+          container: "viewDiv",
+          map: map,
+          center: [31.8, 30.4],
+          zoom: 8
+        });
 
-  // Listen for create/update/delete events
-  sketch.on("create", event => {
-    if (event.state === "complete") saveSketch();
-  });
-  sketch.on("update", event => {
-    if (event.state === "complete") saveSketch();
-  });
-  sketch.on("delete", saveSketch);
+        const sketch = new Sketch({
+          layer: graphicsLayer,
+          view: view,
+          creationMode: "update",
+          availableCreateTools: ["point", "polyline", "polygon", "rectangle", "circle"],
+          container: "sketchDiv"
+        });
 
-  // Load saved sketches after form loads
-  setTimeout(loadSavedSketch, 1000);
-});
-</script>
+        // Find sketch storage field in Joget form
+        function getSketchField() {
+          try {
+            return window.parent.document.querySelector("textarea[name='site_sketch'], input[name='site_sketch']");
+          } catch (e) {
+            console.warn("Unable to access parent form:", e);
+            return null;
+          }
+        }
 
+        // Load saved sketches
+        function loadSketches() {
+          const field = getSketchField();
+          if (field && field.value) {
+            try {
+              const savedGraphics = JSON.parse(field.value);
+              savedGraphics.forEach(g => graphicsLayer.add(new Graphic(g)));
+            } catch (err) {
+              console.warn("Error parsing saved sketches:", err);
+            }
+          }
+        }
+
+        // Save sketches to field
+        function saveSketches() {
+          const field = getSketchField();
+          if (field) {
+            const graphicsData = graphicsLayer.graphics.toArray().map(g => g.toJSON());
+            field.value = JSON.stringify(graphicsData);
+          }
+        }
+
+        // Listen for changes
+        sketch.on("create", e => { if (e.state === "complete") saveSketches(); });
+        sketch.on("update", e => { if (e.state === "complete") saveSketches(); });
+        sketch.on("delete", saveSketches);
+
+        // Load when form is ready
+        setTimeout(loadSketches, 1000);
+      });
+    </script>
   </body>
 </html>
-
