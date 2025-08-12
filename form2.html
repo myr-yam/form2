@@ -1,3 +1,5 @@
+code 2
+
 <!DOCTYPE html>
 <html>
   <head>
@@ -23,68 +25,36 @@
     <div id="viewDiv"></div>
     <div id="sketchDiv"></div>
     <script>
-      require([
-        "esri/Map",
-        "esri/views/MapView",
-        "esri/widgets/Sketch",
-        "esri/layers/GraphicsLayer",
-        "esri/Graphic"
-      ], function(Map, MapView, Sketch, GraphicsLayer, Graphic) {
+  require([
+  "esri/Map",
+  "esri/views/MapView",
+  "esri/widgets/Sketch",
+  "esri/layers/GraphicsLayer"
+], function(Map, MapView, Sketch, GraphicsLayer) {
 
-        const graphicsLayer = new GraphicsLayer();
+  const graphicsLayer = new GraphicsLayer();
 
-        const map = new Map({
-          basemap: "topo-vector",
-          layers: [graphicsLayer]
-        });
+  const map = new Map({
+    basemap: "topo-vector",
+    layers: [graphicsLayer]
+  });
 
-        const view = new MapView({
-          container: "viewDiv",
-          map: map,
-          center: [31.8, 30.4],  // Same default center as Form 1
-          zoom: 8
-        });
+  const view = new MapView({
+    container: "viewDiv",
+    map: map,
+    center: [39.8, 21.4],
+    zoom: 10
+  });
 
-        const sketch = new Sketch({
-          layer: graphicsLayer,
-          view: view,
-          creationMode: "update",
-          availableCreateTools: ["point", "polyline", "polygon", "rectangle", "circle"],
-          container: "sketchDiv" 
-        });
+  const sketch = new Sketch({
+    layer: graphicsLayer,
+    view: view,
+    creationMode: "update",
+    availableCreateTools: ["point", "polyline", "polygon", "rectangle", "circle"],
+    container: "sketchDiv" 
+  });
+});
+</script>
 
-        // Load coordinates from Joget text field "coordinates"
-        function loadCoordinatesFromJoget() {
-          try {
-            const input = window.parent.document.querySelector("input[name='coordinates']");
-            if (input && input.value) {
-              const [lat, lon] = input.value.split(",").map(Number);
-              if (!isNaN(lat) && !isNaN(lon)) {
-                view.center = [lon, lat];
-                view.zoom = 16;
-
-                // Add a marker at that location
-                const pointGraphic = new Graphic({
-                  geometry: {
-                    type: "point",
-                    longitude: lon,
-                    latitude: lat
-                  },
-                  symbol: {
-                    type: "simple-marker",
-                    color: "red",
-                    size: "12px"
-                  }
-                });
-                graphicsLayer.add(pointGraphic);
-              }
-            }
-          } catch (e) {
-            console.warn("Could not read coordinates from parent form:", e);
-          }
-        }
-
-        // Wait for parent form to load before trying to read
-        setTimeout(loadCoordinatesFromJoget, 1000);
-
-        // Keep sketch tool working so s
+  </body>
+</html>
