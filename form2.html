@@ -41,7 +41,7 @@
         const view = new MapView({
           container: "viewDiv",
           map: map,
-          center: [31.8, 30.4], // Default center if no coordinates
+          center: [31.8, 30.4], // default
           zoom: 8
         });
 
@@ -50,34 +50,47 @@
           view: view,
           creationMode: "update",
           availableCreateTools: ["point", "polyline", "polygon", "rectangle", "circle"],
-          container: "sketchDiv"
+          container: "sketchDiv" 
         });
 
-        // Load coordinates from Joget's "coordinates" field
-        function loadCoordinatesFromJoget() {
-          try {
-            const input = window.parent.document.querySelector("input[name='coordinates']");
-            if (input && input.value) {
-              const [lat, lon] = input.value.split(",").map(Number);
-              if (!isNaN(lat) && !isNaN(lon)) {
-                view.center = [lon, lat];
-                view.zoom = 16;
+        function findCoordinatesField() {
+          // Try in main form
+          let input = window.parent.document.querySelector("input[name='coordinates']");
+          if (input) return input;
 
-                // Add a marker to highlight the location
-                const marker = new Graphic({
-                  geometry: { type: "point", longitude: lon, latitude: lat },
-                  symbol: { type: "simple-marker", color: "red", size: "12px" }
-                });
-                graphicsLayer.add(marker);
-              }
+          // Try inside subform iframe
+          const subformIframe = window.parent.document.querySelector("iframe");
+          if (subformIframe && subformIframe.contentDocument) {
+            return subformIframe.contentDocument.querySelector("input[name='coordinates']");
+          }
+
+          return null;
+        }
+
+        function zoomToSavedCoordinates() {
+          const input = findCoordinatesField();
+          if (input && input.value) {
+            const [lat, lon] = input.value.split(",").map(Number);
+            if (!isNaN(lat) && !isNaN(lon)) {
+              view.center = [lon, lat];
+              view.zoom = 16;
+
+              const marker = new Graphic({
+                geometry: { type: "point", longitude: lon, latitude: lat },
+                symbol: { type: "simple-marker", color: "red", size: "12px" }
+              });
+              graphicsLayer.add(marker);
+              console.log("Zoomed to:", lat, lon);
+            } else {
+              console.warn("Invalid coordinates format:", input.value);
             }
-          } catch (e) {
-            console.warn("Could not read coordinates from parent form:", e);
+          } else {
+            console.warn("Coordinates field not found or empty");
           }
         }
 
-        // Wait a moment for the parent Joget form to load, then run
-        setTimeout(loadCoordinatesFromJoget, 1000);
+        // Give Joget enough time to fully render subform
+        setTimeout(zoomToSavedCoordinates, 2000);
       });
     </script>
   </body>
