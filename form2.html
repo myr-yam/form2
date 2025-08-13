@@ -23,60 +23,50 @@
     <div id="viewDiv"></div>
     <div id="sketchDiv"></div>
     <script>
-require([
-  "esri/Map",
-  "esri/views/MapView",
-  "esri/widgets/Sketch",
-  "esri/layers/GraphicsLayer"
-], function(Map, MapView, Sketch, GraphicsLayer) {
-  const graphicsLayer = new GraphicsLayer();
+      require([
+        "esri/Map",
+        "esri/views/MapView",
+        "esri/widgets/Sketch",
+        "esri/layers/GraphicsLayer"
+      ], function(Map, MapView, Sketch, GraphicsLayer) {
+        const graphicsLayer = new GraphicsLayer();
 
-  const map = new Map({
-    basemap: "topo-vector",
-    layers: [graphicsLayer]
-  });
+        const map = new Map({
+          basemap: "topo-vector",
+          layers: [graphicsLayer]
+        });
 
-  const view = new MapView({
-    container: "viewDiv",
-    map: map,
-    center: [31.8, 30.4],  // Default center
-    zoom: 8
-  });
+        const view = new MapView({
+          container: "viewDiv",
+          map: map,
+          center: [31.8, 30.4],  // Default center
+          zoom: 8
+        });
 
-  const sketch = new Sketch({
-    layer: graphicsLayer,
-    view: view,
-    creationMode: "update",
-    availableCreateTools: ["point", "polyline", "polygon", "rectangle", "circle"],
-    container: "sketchDiv"
-  });
+        const sketch = new Sketch({
+          layer: graphicsLayer,
+          view: view,
+          creationMode: "update",
+          availableCreateTools: ["point", "polyline", "polygon", "rectangle", "circle"],
+          container: "sketchDiv"
+        });
 
-  // Wait until coordinates field has value
-  function waitForCoordinates() {
-    if (window.parent && window.parent.document) {
-      const coordField = window.parent.document.getElementById("coordinates");
-      if (coordField && coordField.value) {
-        const [lat, lon] = coordField.value.split(",").map(Number);
-        if (!isNaN(lat) && !isNaN(lon)) {
-          view.goTo({ center: [lon, lat], zoom: 15 });
-
-          // Add marker
-          const pointGraphic = {
-            geometry: { type: "point", longitude: lon, latitude: lat },
-            symbol: { type: "simple-marker", color: "red", size: "12px" }
-          };
-          graphicsLayer.add(pointGraphic);
-          return; // stop checking
+        // --- NEW: read coords from ?coords=LAT,LON in the URL ---
+        const params = new URLSearchParams(window.location.search);
+        const coords = params.get("coords");
+        if (coords) {
+          const [lat, lon] = coords.split(",").map(Number);
+          if (!isNaN(lat) && !isNaN(lon)) {
+            view.when(function() {
+              view.goTo({ center: [lon, lat], zoom: 15 });
+              graphicsLayer.add({
+                geometry: { type: "point", longitude: lon, latitude: lat },
+                symbol: { type: "simple-marker", color: "red", size: "12px" }
+              });
+            });
+          }
         }
-      }
-    }
-    setTimeout(waitForCoordinates, 300); // check again in 0.3 sec
-  }
-
-  view.when(waitForCoordinates);
-});
-</script>
-
+      });
+    </script>
   </body>
 </html>
-
