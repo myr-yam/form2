@@ -17,12 +17,30 @@
         padding: 10px;
         border-radius: 6px;
       }
+      .msg {
+        position: absolute; bottom: 10px; left: 10px; background: white; padding: 6px 8px; border-radius: 6px; font: 12px sans-serif;
+      }
     </style>
   </head>
   <body>
     <div id="viewDiv"></div>
     <div id="sketchDiv"></div>
+    <div id="status" class="msg" style="display:none;"></div>
     <script>
+      function showMsg(t){const el=document.getElementById("status"); el.textContent=t; el.style.display="block";}
+      function parseLatLon(str){
+        if(!str) return null;
+        // normalize: trim, remove extra spaces
+        const cleaned = String(str).trim().replace(/\s+/g,'');
+        // allow "lat,lon" or "lat;lon"
+        const parts = cleaned.split(/[;,]/);
+        if(parts.length !== 2) return null;
+        const lat = Number(parts[0]);
+        const lon = Number(parts[1]);
+        if (Number.isNaN(lat) || Number.isNaN(lon)) return null;
+        return {lat, lon};
+      }
+
       require([
         "esri/Map",
         "esri/views/MapView",
@@ -30,16 +48,11 @@
         "esri/layers/GraphicsLayer"
       ], function(Map, MapView, Sketch, GraphicsLayer) {
         const graphicsLayer = new GraphicsLayer();
-
-        const map = new Map({
-          basemap: "topo-vector",
-          layers: [graphicsLayer]
-        });
-
+        const map = new Map({ basemap: "topo-vector", layers: [graphicsLayer] });
         const view = new MapView({
           container: "viewDiv",
           map: map,
-          center: [31.8, 30.4],  // Default center
+          center: [31.8, 30.4],
           zoom: 8
         });
 
@@ -51,21 +64,34 @@
           container: "sketchDiv"
         });
 
-        // --- NEW: read coords from ?coords=LAT,LON in the URL ---
+        // 1) Try URL param (?coordinates=LAT,LON or ?coords=LAT,LON)
         const params = new URLSearchParams(window.location.search);
-        const coords = params.get("coords");
-        if (coords) {
-          const [lat, lon] = coords.split(",").map(Number);
-          if (!isNaN(lat) && !isNaN(lon)) {
-            view.when(function() {
-              view.goTo({ center: [lon, lat], zoom: 15 });
-              graphicsLayer.add({
-                geometry: { type: "point", longitude: lon, latitude: lat },
-                symbol: { type: "simple-marker", color: "red", size: "12px" }
-              });
-            });
-          }
+        const fromUrl = parseLatLon(params.get("coordinates") || params.get("coords"));
+
+        function goToPoint(lat, lon){
+          view.goTo({ center: [lon, lat], zoom: 15 }).catch(()=>{});
+          graphicsLayer.add({
+            geometry: { type: "point", longitude: lon, latitude: lat },
+            symbol: { type: "simple-marker", color: "red", size: "12px" }
+          });
         }
+
+        view.when(function(){
+          if (fromUrl) {
+            goToPoint(fromUrl.lat, fromUrl.lon);
+          } else {
+            showMsg("No coordinates found in URL. Expected ?coordinates=lat,lon");
+          }
+        });
+
+        // 2) Also support postMessage as a fallback (see Option B below)
+        window.addEventListener("message", function(e){
+          if (!e || !e.data) return;
+          if (e.data.type === "coordinates") {
+            const parsed = parseLatLon(e.data.value);
+            if (parsed) goToPoint(parsed.lat, parsed.lon);
+          }
+        });
       });
     </script>
   </body>
