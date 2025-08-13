@@ -23,36 +23,52 @@
     <div id="viewDiv"></div>
     <div id="sketchDiv"></div>
     <script>
-  require([
-  "esri/Map",
-  "esri/views/MapView",
-  "esri/widgets/Sketch",
-  "esri/layers/GraphicsLayer"
-], function(Map, MapView, Sketch, GraphicsLayer) {
+      require([
+        "esri/Map",
+        "esri/views/MapView",
+        "esri/widgets/Sketch",
+        "esri/layers/GraphicsLayer"
+      ], function(Map, MapView, Sketch, GraphicsLayer) {
+        const graphicsLayer = new GraphicsLayer();
 
-  const graphicsLayer = new GraphicsLayer();
+        const map = new Map({
+          basemap: "topo-vector",
+          layers: [graphicsLayer]
+        });
 
-  const map = new Map({
-    basemap: "topo-vector",
-    layers: [graphicsLayer]
-  });
+        const view = new MapView({
+          container: "viewDiv",
+          map: map,
+          center: [31.8, 30.4],  // Default center
+          zoom: 8
+        });
 
-  const view = new MapView({
-    container: "viewDiv",
-    map: map,
-    center: [39.8, 21.4],
-    zoom: 10
-  });
+        const sketch = new Sketch({
+          layer: graphicsLayer,
+          view: view,
+          creationMode: "update",
+          availableCreateTools: ["point", "polyline", "polygon", "rectangle", "circle"],
+          container: "sketchDiv"
+        });
 
-  const sketch = new Sketch({
-    layer: graphicsLayer,
-    view: view,
-    creationMode: "update",
-    availableCreateTools: ["point", "polyline", "polygon", "rectangle", "circle"],
-    container: "sketchDiv" 
-  });
-});
-</script>
+        // NEW: Get saved coordinates from Joget and zoom there
+        if (window.parent && window.parent.document) {
+          const coordField = window.parent.document.getElementById("coordinates");
+          if (coordField && coordField.value) {
+            const [lat, lon] = coordField.value.split(",").map(Number);
+            view.when(function() {
+              view.goTo({ center: [lon, lat], zoom: 15 });
 
+              // Add marker at saved location
+              const pointGraphic = {
+                geometry: { type: "point", longitude: lon, latitude: lat },
+                symbol: { type: "simple-marker", color: "red", size: "12px" }
+              };
+              graphicsLayer.add(pointGraphic);
+            });
+          }
+        }
+      });
+    </script>
   </body>
 </html>
